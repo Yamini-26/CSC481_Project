@@ -1,0 +1,12 @@
+# python
+__pycache__/
+.ipynb_checkpoints/
+
+# editor
+.vscode/
+
+# virtual env
+.venv/
+
+# data
+data/
