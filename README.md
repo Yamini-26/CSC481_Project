@@ -105,8 +105,6 @@ python src/make_figures.py
 ```
 Makes all figures (inputs, intermediate outputs, histograms, success and failure examples) in `outputs/figures/`.
 
-`sim/render_visual_variations.py` is the script that rendered the 13 simulated versions. It needs Drake and the lab's robot repository, so it's included only to show how the data was made.
-
 ## Outputs
 
 The `outputs/` folder is included with all results:
