@@ -6,3 +6,9 @@ pandas
 matplotlib
 pillow
 tqdm
+# segmentation (segment.py, make_figures.py) and the SAM labeler (label_real.py), need a CUDA GPU.
+# Install torch/torchvision for your CUDA version first, see https://pytorch.org/get-started/locally/
+# Tested with torch 2.12 + torchvision 0.27 (CUDA 13.0) and transformers 5.14.
+torch
+torchvision
+transformers

@@ -9,6 +9,7 @@ Run directly to check the data (includes all sim variations)
 from pathlib import Path
 
 import cv2
+import numpy as np
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 CAMERAS = ["cam_high", "cam_low", "cam_left_wrist", "cam_right_wrist"]
@@ -25,6 +26,18 @@ def load_image(path):
     if img is None:
         raise FileNotFoundError(f"could not read {path}")
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+
+def load_labels(source, camera):
+    """{frame_name: (H, W) uint8 class map} from data/<source>/labels/<camera>.npz.
+
+    source is "real" or a sim condition. Real frames are only labeled every 5th frame.
+    """
+    path = DATA_DIR / source / "labels" / f"{camera}.npz"
+    if not path.exists():
+        return {}
+    d = np.load(path)
+    return {str(name): label for name, label in zip(d["frame_names"], d["labels"])}
 
 
 def get_pair_paths(condition, camera):

@@ -51,6 +51,7 @@ class Sam:
     """SAM with the image embedding cached, so each new click only runs the small decoder."""
 
     def __init__(self, model_name, device):
+        """Load the SAM model and its pre/post-processor from Hugging Face."""
         import torch
         from transformers import SamModel, SamProcessor
         self.torch = torch
@@ -59,6 +60,7 @@ class Sam:
         self.model = SamModel.from_pretrained(model_name).to(device).eval()
 
     def set_image(self, rgb):
+        """Run the heavy image encoder once per frame and keep the embedding."""
         self.rgb = rgb
         inputs = self.processor(images=rgb, return_tensors="pt").to(self.device)
         with self.torch.no_grad():
@@ -96,7 +98,9 @@ def compose(objects, shape):
 
 
 class Labeler:
+    """Interactive OpenCV window: SAM clicks/boxes + brush -> per-frame class masks."""
     def __init__(self, camera, frames, sam, scale):
+        """Set up the window state; work files go to data/real/labels/_work/<camera>/."""
         self.camera = camera
         self.frames = frames
         self.sam = sam
@@ -111,6 +115,7 @@ class Labeler:
     # ---------- per-frame state ----------
 
     def load_frame(self, i):
+        """Show frame i, reload its saved objects (if any) and embed it with SAM."""
         self.i = i
         path = self.frames[i]
         self.rgb = cv2.cvtColor(cv2.imread(str(path)), cv2.COLOR_BGR2RGB)
@@ -129,6 +134,7 @@ class Labeler:
         print(" ready")
 
     def clear_prompts(self):
+        """Drop the current clicks, box and brush strokes (not the accepted objects)."""
         self.points, self.box = [], None
         self.candidates, self.scores, self.pick = None, None, 0
         self.add = np.zeros(self.shape, bool)
@@ -137,6 +143,7 @@ class Labeler:
         self.drag = None
 
     def run_sam(self):
+        """Re-run the SAM decoder on the current clicks/box and pick its best guess."""
         if self.points or self.box is not None:
             self.candidates, self.scores = self.sam.predict(self.points, self.box)
             self.pick = int(np.argmax(self.scores))
@@ -144,10 +151,12 @@ class Labeler:
             self.candidates = None
 
     def current_mask(self):
+        """SAM's chosen mask with the brush additions/removals applied."""
         mask = self.candidates[self.pick].copy() if self.candidates is not None else np.zeros(self.shape, bool)
         return (mask | self.add) & ~self.remove
 
     def accept(self):
+        """Keep the current mask as an object of the selected class."""
         mask = self.current_mask()
         if not mask.any():
             return
@@ -156,6 +165,7 @@ class Labeler:
         self.clear_prompts()
 
     def undo(self):
+        """Undo the last click/box/stroke, or the last accepted object if there are none."""
         if self.history:
             kind, data = self.history.pop()
             if kind == "point":
@@ -170,6 +180,7 @@ class Labeler:
             print(f"  - undid {CLASS_NAMES[c]}")
 
     def save(self):
+        """Save this frame's objects and rebuild the camera's label file."""
         stem = self.frames[self.i].stem
         work = self.work_dir / f"{stem}.npz"
         if not self.objects:
@@ -182,6 +193,7 @@ class Labeler:
     # ---------- drawing ----------
 
     def render(self):
+        """Image with accepted labels, the current mask, prompts and a status bar on top."""
         img = self.rgb.astype(np.float32)
         if self.show_labels and self.objects:
             label = compose(self.objects, self.shape)
@@ -220,6 +232,7 @@ class Labeler:
     # ---------- input ----------
 
     def on_mouse(self, event, x, y, flags, _):
+        """Mouse handler: click = point, drag = box, right click = negative point; brush mode paints."""
         x = min(max(x / self.scale, 0), self.shape[1] - 1)
         y = min(max((y - 28) / self.scale, 0), self.shape[0] - 1)
 
@@ -262,6 +275,7 @@ class Labeler:
             self.run_sam()
 
     def run(self, start):
+        """Main loop: draw the window and handle the keyboard shortcuts listed in HELP."""
         win = "label_real (h = help in terminal)"
         cv2.namedWindow(win, cv2.WINDOW_AUTOSIZE)
         cv2.setMouseCallback(win, self.on_mouse)
@@ -326,6 +340,7 @@ def write_outputs(camera, work_dir, shape):
 
 
 def main():
+    """Parse arguments, load SAM and start labeling at the first unlabeled frame."""
     p = argparse.ArgumentParser(description="Label real frames with SAM")
     p.add_argument("--camera", required=True, choices=["cam_high", "cam_low", "cam_left_wrist", "cam_right_wrist"])
     p.add_argument("--step", type=int, default=5, help="label every Nth frame (5 -> 16 frames per camera)")

@@ -103,6 +103,7 @@ def plot_color_pair(real, sim, out_path, title=""):
 
 
 def print_table(title, rows_by_camera):
+    """Print the mean of each score per camera."""
     keys = list(next(iter(rows_by_camera.values()))[0].keys())
     print(f"\n{title}")
     print(f"{'camera':16s}" + "".join(f"{k:>14s}" for k in keys))
